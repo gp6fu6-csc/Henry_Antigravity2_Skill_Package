@@ -9,6 +9,7 @@ This is a unified skill and configuration package for Google Antigravity 2.0, cu
 2. **RTK (Rust Token Killer) Integration** - Standardized Windows-based token compression for shell commands.
 3. **NotebookLM MCP Guide** - Secure management of NotebookLM MCP server and authentication troubleshooting.
 4. **GitHub Workflow Guide** - Secure local git operations utilizing native Windows credentials.
+5. **Academic Research Pipeline** - A multi-stage pipeline for deep academic, patent, and technical research.
 
 ---
 
@@ -26,8 +27,10 @@ Henry_Antigravity2_Skill_Package/
     │   └── SKILL.md           # Windows RTK command integration rules
     ├── notebooklm/
     │   └── SKILL.md           # NotebookLM session and MCP guide
-    └── github-workflow/
-        └── SKILL.md           # Git download/upload processes
+    ├── github-workflow/
+    │   └── SKILL.md           # Git download/upload processes
+    └── academic-research-pipeline/
+        └── SKILL.md           # Multi-stage technical & academic research pipeline
 ```
 
 ---
