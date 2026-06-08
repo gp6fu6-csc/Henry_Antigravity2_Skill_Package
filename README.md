@@ -10,6 +10,9 @@ This is a unified skill and configuration package for Google Antigravity 2.0, cu
 3. **NotebookLM MCP Guide** - Secure management of NotebookLM MCP server and authentication troubleshooting.
 4. **GitHub Workflow Guide** - Secure local git operations utilizing native Windows credentials.
 5. **Academic Research Pipeline** - A multi-stage pipeline for deep academic, patent, and technical research.
+6. **Skill Creator** - Official Anthropic tool to create, modify, and optimize skills.
+7. **Frontend Design** - Official frontend design skill for crafting high-quality production-grade UIs.
+8. **Find Skills (Skill.sh)** - Discovery and management tool to search/install agent skills via the skills.sh ecosystem.
 
 ---
 
@@ -29,8 +32,14 @@ Henry_Antigravity2_Skill_Package/
     │   └── SKILL.md           # NotebookLM session and MCP guide
     ├── github-workflow/
     │   └── SKILL.md           # Git download/upload processes
-    └── academic-research-pipeline/
-        └── SKILL.md           # Multi-stage technical & academic research pipeline
+    ├── academic-research-pipeline/
+    │   └── SKILL.md           # Multi-stage technical & academic research pipeline
+    ├── skill-creator/
+    │   └── SKILL.md           # Official skill creation and optimization tool
+    ├── frontend-design/
+    │   └── SKILL.md           # Official premium UI/UX frontend design skill
+    └── find-skills/
+        └── SKILL.md           # Global agent skill search & discovery tool (Skill.sh)
 ```
 
 ---
