@@ -13,6 +13,7 @@ This is a unified skill and configuration package for Google Antigravity 2.0, cu
 6. **Skill Creator** - Official Anthropic tool to create, modify, and optimize skills.
 7. **Frontend Design** - Official frontend design skill for crafting high-quality production-grade UIs.
 8. **Find Skills (Skill.sh)** - Discovery and management tool to search/install agent skills via the skills.sh ecosystem.
+9. **Generic Research Workflow** - A general-purpose scientific research and patent intelligence pipeline with modular loop & harness.
 
 ---
 
@@ -40,6 +41,11 @@ Henry_Antigravity2_Skill_Package/
     │   └── SKILL.md           # Official premium UI/UX frontend design skill
     └── find-skills/
         └── SKILL.md           # Global agent skill search & discovery tool (Skill.sh)
+    └── generic-research-workflow/
+        ├── SKILL.md           # General-purpose research pipeline with loop & harness
+        └── scripts/
+            ├── patent_literature_crawler.py
+            └── run_workflow.py
 ```
 
 ---
