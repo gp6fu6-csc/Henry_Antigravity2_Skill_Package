@@ -135,6 +135,16 @@ class WorkflowRunner:
         print(f"\n📇 [簡報生成] 正在根據動態頁數權重，生成 {slides_name}...")
         self.assemble_slides_document(proposal_draft_dir, slides_name)
 
+        # 建立 workspace/results 目錄，並將產物複製一份過去，作為最終成果歸檔
+        results_dir = os.path.join(self.workspace_dir, 'results')
+        os.makedirs(results_dir, exist_ok=True)
+        
+        # 拷貝 paper_proposal.md 與 slides_proposal.md 到 results 目錄
+        import shutil
+        shutil.copy2(os.path.join(proposal_draft_dir, paper_name), os.path.join(results_dir, "final_report.md"))
+        shutil.copy2(os.path.join(proposal_draft_dir, slides_name), os.path.join(results_dir, "slides_report.md"))
+        print(f"\n📁 [成果歸檔] 已自動將最終報告與簡報複製至成果目錄: {results_dir}")
+
         print("\n" + "="*50)
         print("🎉 [Workflow] 階段 1: 提案準備執行完畢！")
         print("="*50)
