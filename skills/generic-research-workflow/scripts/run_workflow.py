@@ -172,9 +172,9 @@ class WorkflowRunner:
         os.makedirs(self.results_dir, exist_ok=True)
 
         print("\n" + "="*50)
-        print(f"🚀 [Workflow] 啟動階段 1: 提案準備 (專案: {self.config.get('project_name')})")
+        print(f"🚀 [Workflow] 啟動階段 1: 專利與文獻 Survey (專案: {self.config.get('project_name')})")
         print("="*50)
-        print(f"[目錄] 確保提案輸出目錄與結構已建立: {self.survey_dir}")
+        print(f"[目錄] 確保輸出目錄與結構已建立: {self.survey_dir}")
 
         # 讀取動態關鍵字
         keywords = self.config.get("keywords", [])
@@ -197,6 +197,7 @@ class WorkflowRunner:
                     "--limit", "10",
                     "--output_dir", self.raw_data_dir
                 ]
+                import subprocess
                 subprocess.run(cmd, check=True)
                 print("[成功] 自動爬蟲檢索完畢，數據已寫入 raw_data。")
             except Exception as e:
@@ -206,28 +207,22 @@ class WorkflowRunner:
             print("[偵測] 發現既有 raw_data，跳過下載直接進入解構與生成程序。")
 
         # 兩階段精煉：生成單一 Markdown 文件，並保存至獨立子資料夾
-        print("\n📋 [兩階段精煉] 正在解析原始 JSON，為每個專利與文獻生成獨立子資料夾（原始 PDF, 圖片, 摘要）...")
+        print("\n📋 [兩階段精煉] 正在解析原始 JSON，為每個專利與文獻生成獨立子資料夾...")
         self.generate_individual_records()
 
         # 拼接並合成書面報告章節
         stage_config = self.config.get("stages", {}).get("1_提案準備", {})
         paper_name = stage_config.get("paper_name", "paper_proposal.md")
-        print(f"\n✍️ [報告拼裝] 正在根據法定七大章節，拼接並生成完整的 {paper_name}...")
+        print(f"\n✍️ [報告拼裝] 正在生成詳細的 Survey 報告: {paper_name}...")
         self.assemble_proposal_document(paper_name)
 
-        # 生成投影片報告草稿
-        slides_name = stage_config.get("slides_name", "slides_proposal.md")
-        print(f"\n📇 [簡報生成] 正在根據動態頁數權重，生成 {slides_name}...")
-        self.assemble_slides_document(slides_name)
-
-        # 拷貝成果至 results 目錄作為最終歸檔
+        # 拷貝成果至 results 目錄作為最終歸檔 (僅拷貝 final_report.md)
         import shutil
         shutil.copy2(os.path.join(self.drafts_dir, paper_name), os.path.join(self.results_dir, "final_report.md"))
-        shutil.copy2(os.path.join(self.drafts_dir, slides_name), os.path.join(self.results_dir, "slides_report.md"))
-        print(f"\n📁 [成果歸檔] 已自動將最終報告與簡報複製至成果目錄: {self.results_dir}")
+        print(f"\n📁 [成果歸檔] 已自動將文獻分析報告複製至成果目錄: {self.results_dir}")
 
         print("\n" + "="*50)
-        print("🎉 [Workflow] 階段 1: 提案準備執行完畢！")
+        print("🎉 [Workflow] 階段 1: Survey 執行完畢！")
         print("="*50)
 
     def generate_individual_records(self):
@@ -434,293 +429,83 @@ class WorkflowRunner:
 
     def assemble_proposal_document(self, paper_name):
         output_file = os.path.join(self.drafts_dir, paper_name)
-        is_steel = (self.config.get("template") == "steel_coil")
         proj_name = self.config.get("project_name")
-        keywords_str = ", ".join(self.config.get("keywords", []))
+        keywords = self.config.get("keywords", [])
 
         # 動態解析已收集的文獻與專利
         papers, patents = self._parse_records()
 
-        # 生成專利 Markdown 表格 (指向獨立資料夾中的摘要)
-        if patents:
-            patent_table = "| 序號 | 專利案號 | 專利名稱 | 專利權人 | 公開年份 | 詳細解構報告連結 |\n"
-            patent_table += "| --- | --- | --- | --- | --- | --- |\n"
-            for idx, pat in enumerate(patents):
-                patent_table += f"| {idx+1} | `{pat['pat_num']}` | {pat['title']} | {pat['assignee']} | {pat['pub_year']} | [詳細解構報告](../patents/{pat['id']}/summary.md) |\n"
-        else:
-            patent_table = "*（目前無已解構之專利數據）*"
+        # 生成專利與學術文獻的詳細解構內容 (依關鍵字主題劃分)
+        patent_details = ""
+        for k, kw in enumerate(keywords):
+            kw_patents = [p for p in patents if f"branch{k}_" in p["id"]]
+            if kw_patents:
+                patent_details += f"### 2.1.{k+1} 關鍵字主題：{kw} (相關專利共 {len(kw_patents)} 件)\n\n"
+                for pat in kw_patents:
+                    adjusted = pat["content"].replace("\n# ", "\n#### ").replace("\n## ", "\n##### ")
+                    if adjusted.startswith("# "):
+                        adjusted = "#### " + adjusted[2:]
+                    patent_details += adjusted + "\n\n---\n"
 
-        # 生成學術文獻 Markdown 表格 (指向獨立資料夾中的摘要)
-        if papers:
-            paper_table = "| 序號 | 文獻標題 | 作者群 | 發表年份 | 發表期刊/會議 | DOI / 連結 | 詳細解構報告連結 |\n"
-            paper_table += "| --- | --- | --- | --- | --- | --- | --- |\n"
-            for idx, pap in enumerate(papers):
-                author_display = pap['authors']
-                if len(author_display) > 40:
-                    author_display = author_display[:37] + "..."
-                
-                doi_link = pap['doi']
-                doi_display = f"[DOI 連結]({doi_link})" if doi_link.startswith('http') else doi_link
-                paper_table += f"| {idx+1} | {pap['title']} | {author_display} | {pap['year']} | {pap['venue']} | {doi_display} | [詳細解構報告](../papers/{pap['id']}/summary.md) |\n"
-        else:
-            paper_table = "*（目前無已解構之文獻數據）*"
+        paper_details = ""
+        for k, kw in enumerate(keywords):
+            kw_papers = [p for p in papers if f"theme{k}_" in p["id"]]
+            if kw_papers:
+                paper_details += f"### 2.2.{k+1} 關鍵字主題：{kw} (相關文獻共 {len(kw_papers)} 篇)\n\n"
+                for pap in kw_papers:
+                    adjusted = pap["content"].replace("\n# ", "\n#### ").replace("\n## ", "\n##### ")
+                    if adjusted.startswith("# "):
+                        adjusted = "#### " + adjusted[2:]
+                    paper_details += adjusted + "\n\n---\n"
 
         # 生成 APA 7th 文後參考文獻清單
         ref_list = ""
         if patents:
-            ref_list += "### 7.1 全球專利文獻引用清單\n"
+            ref_list += "### 4.1 全球專利文獻引用清單\n"
             for pat in patents:
                 country_code = pat['pat_num'][:2] if len(pat['pat_num']) > 2 else "US"
                 ref_list += f"{pat['assignee']}. ({pat['pub_year']}). *{pat['title']}* ({country_code} Patent No. {pat['pat_num']}). {country_code} Patent Office. [詳細解構報告](../patents/{pat['id']}/summary.md)\n\n"
             
         if papers:
-            ref_list += "### 7.2 頂尖學術論文引用清單\n"
+            ref_list += "### 4.2 頂尖學術論文引用清單\n"
             for pap in papers:
                 doi_str = f" https://doi.org/{pap['doi']}" if pap['doi'] != 'N/A' and not pap['doi'].startswith('http') else f" {pap['doi']}" if pap['doi'] != 'N/A' else ""
                 ref_list += f"{pap['authors']} ({pap['year']}). {pap['title']}. *{pap['venue']}*.{doi_str} [詳細解構報告](../papers/{pap['id']}/summary.md)\n\n"
 
-        # 根據關鍵字主題劃分，生成全球專利與學術論文的詳細解構內容 (取代原本的 image_gallery)
-        keywords = self.config.get("keywords", [])
-        
-        patent_details = "\n### 2.3 全球專利詳細解構內容 (依關鍵字主題劃分)\n\n"
-        for k, kw in enumerate(keywords):
-            kw_patents = [p for p in patents if f"branch{k}_" in p["id"]]
-            if kw_patents:
-                patent_details += f"\n#### 2.3.{k+1} 主題：{kw} (相關專利共 {len(kw_patents)} 件)\n\n"
-                for pat in kw_patents:
-                    adjusted = pat["content"].replace("\n# ", "\n##### ").replace("\n## ", "\n###### ")
-                    if adjusted.startswith("# "):
-                        adjusted = "##### " + adjusted[2:]
-                    patent_details += adjusted + "\n\n---\n"
-            else:
-                patent_details += f"\n#### 2.3.{k+1} 主題：{kw} (無相關專利)\n\n"
+        full_content = f"""# 專利與學術文獻檢索分析報告：{proj_name}
 
-        paper_details = "\n### 2.4 頂尖學術文獻詳細解構內容 (依關鍵字主題劃分)\n\n"
-        for k, kw in enumerate(keywords):
-            kw_papers = [p for p in papers if f"theme{k}_" in p["id"]]
-            if kw_papers:
-                paper_details += f"\n#### 2.4.{k+1} 主題：{kw} (相關文獻共 {len(kw_papers)} 篇)\n\n"
-                for pap in kw_papers:
-                    adjusted = pap["content"].replace("\n# ", "\n##### ").replace("\n## ", "\n###### ")
-                    if adjusted.startswith("# "):
-                        adjusted = "##### " + adjusted[2:]
-                    paper_details += adjusted + "\n\n---\n"
-            else:
-                paper_details += f"\n#### 2.4.{k+1} 主題：{kw} (無相關文獻)\n\n"
-
-        image_gallery = patent_details + "\n\n" + paper_details
-
-        # 準備 APA 7th 文內引用標註
-        cite_paper_1 = f"({self._format_apa_author(papers[0]['authors'])}, {papers[0]['year']})" if len(papers) > 0 else "(Wang & Chen, 2024)"
-        cite_paper_2 = f"({self._format_apa_author(papers[1]['authors'])}, {papers[1]['year']})" if len(papers) > 1 else "(Smith & Johnson, 2023)"
-        cite_patent_1 = f"({patents[0]['assignee']}, {patents[0]['pub_year']})" if len(patents) > 0 else "(Nippon Steel Corp., 2024)"
-        cite_patent_2 = f"({patents[1]['assignee']}, {patents[1]['pub_year']})" if len(patents) > 1 else "(Technology Corp., 2023)"
-
-        if is_steel:
-            full_content = f"""# 計畫提案書：{proj_name}
-
-## 摘要 (Abstract)
-熱軋鋼捲在捲取、吊運及儲存過程中，因張力不均、摩擦力異動或受力不均，常伴隨各種側緣缺陷（如 A81鏡筒狀、A82側緣突出、A83鬆散、A84橢圓、A85摺疊與邊裂）。傳統以 2D 相機為核心的機器視覺，容易受到金屬反光、陰影及對「高低起伏」不敏感的物理限制，造成極高的漏判率。
-本計畫提出一項基於高精度 3D 掃描數據的 AI 缺陷檢測方案。核心創新包含：先進行基準面擬合（Baseline Fitting）消除正常的鋼捲錐度與幾何橢圓變形，將大面積 3D 點雲投影為 2D 深度圖（Depth Map）；接著利用「Go/No-go 二階段快速篩選」搭配「15%-20% 邊界重疊取樣」策略，徹底解決了 3D 點雲算力消耗龐大與邊界分割處漏判的痛點。本計畫將建立具備高訴訟防禦強度的專利壁壘，預期使缺陷檢測率由現行 2D 系統的 85% 躍升至 98% 以上。
-
----
-
-## 第一章：計畫緣起
-
-### 1.1 現狀痛點與起因剖析
-熱軋鋼捲產品在交貨給下游製程（如冷軋、酸洗、精密製形）時，側緣品質至關重要。任何微小突起或裂紋，在後續高張力軋延中均可能導致斷帶事故，造成數百萬元的設備受損與產線停機。
-側緣缺陷核心特徵包括：
-*   **A81 鏡筒狀鋼捲 (Telescoped Coil)**：捲取張力設定不當，使鋼捲層像伸縮望遠鏡般呈階梯狀突出。
-*   **A82 側緣突出 (Protruding Wraps)**：在捲取或包裝過程中，少數幾層鋼帶未能對齊，產生局部薄片突起。
-*   **A83 鬆散鋼捲 (Loosely Wrapped Coil)**：鋼捲捲取張力過低，導致層與層之間摩擦力不足，整體結構鬆動。
-*   **A84 橢圓鋼捲 (Oval Coil)**：熱軋鋼捲在起重機吊運時，受吊具擠壓變形或重力沉降產生的整體幾何變形。
-*   **A85 摺疊鋼捲 (Folded Strip)**：帶鋼邊緣局部被折入或皺摺。
-*   **邊裂 (Edge Crack)**：軋延時受剪切應力不均產生的邊緣微小撕裂。
-
-### 1.2 現有技術 (State of the Art) 侷限
-現行主流工業檢測高度依賴 2D 機器視覺。然而，2D 影像無法捕捉「深度資訊」，難以區分微小的階梯高度（例如 1mm 級的 A82 局部突出）。部分廠商雖導入 3D 線激光掃描，但面臨大解析度點雲數據傳輸延遲高、即時處理算法複雜度高的瓶頸，難以與高速生產線（>15m/s）同步。
-
-### 1.3 未來發展之核心技術
-為攻克此一瓶頸，本專案將採取三維數據降維映射（Projection mapping）技術：
-1.  **基準面擬合（Baseline Fitting）**：首先利用最小平方法或 RANSAC 算法擬合鋼捲端面的理論幾何平面，藉此 Normalize 掉整體幾何變形（如 A84 橢圓變形），只留下純粹相對於基準面的「異常高低起伏特徵」。
-2.  **特徵深度圖轉換**：將過濾後的起伏數據矩陣映射為 2D 深度圖，以便調用高能效的 AI 分類卷積核。
-3.  **Go/No-go 二階段篩選與 20% 重疊拼接**：快速篩選無缺陷區域，對異常區塊以 20% 的重疊率進行 Patch 採樣，確保邊界接縫處的缺陷不會被切斷漏判。
-
----
-
-## 第二章：全球文獻與專利檢索
-
-### 2.1 全球前 10 大技術國專利檢索綜整
-本計畫專利工程師模擬跨國專利審查流程，針對「{keywords_str}」核心關鍵字，檢索包含美國 (USPTO)、中國 (CNIPA)、日本 (JPO)、台灣 (TIPO) 等前 10 大技術國專利庫，共檢索並深度解構了 {len(patents)} 件代表專利 {cite_patent_1}。
-*   **專利牆現狀**：美國與日本科技巨頭（如 JFE、新日鐵）在「鋼捲表面 2D 檢測」及「基礎 3D 幾何測量」上有超過 70% 的專利覆蓋。
-*   **迴避設計與新穎性藍海**：針對「利用參考基準面去除鋼捲全局變形，並結合 Go/No-go 二階段卷積與重疊拼接」的專利佈局仍屬空白 {cite_patent_2}。本計畫的 FTO（自由實施）評估極為安全，已將此特定拼接算法列為首要智財申請與防禦重點。
-
-#### 全球專利檢索明細表
-{patent_table}
-
-### 2.2 頂尖學術文獻探討
-大學教授針對近 10 年內 IEEE Transactions、CVPR 與 ICRA 等同儕審查頂尖文獻進行了深入檢索與解構，共收錄 {len(papers)} 篇核心學術文獻：
-*   **文獻綜述**：目前在處理超高解析度工業點雲時，最主流且具備高學術公信力的做法是「點雲向 2D 深度圖映射降維」以進行 CNN / ViT 處理 {cite_paper_1}。
-*   **接縫防呆機制**：為了防止「重疊區塊」特徵拼接時因邊緣效應產生偽影（Artifacts）造成 AI 誤判，文獻建議將 Patch 重疊率設為 15%-20%，並導入特徵平滑演算法 {cite_paper_2}。
-
-#### 頂尖學術文獻檢索明細表
-{paper_table}
-{image_gallery}
-
----
-
-## 第三章：前置研究綜整
-
-由本計畫專家委員會（首席技術總監、AI工程師、專利工程師、大學教授、一線操作員）啟動 Mesh Mode 網狀大辯論，凝聚共識如下：
-*   **一線操作可行性對齊**：一線操作員強調，鋼捲吊運所產生的 A84（橢圓）幾何形變非常頻繁，若直接用絕對深度做檢測，系統會頻繁誤報。這證明了 CTO 與 AI 工程師提出的「基準面擬合預處理模組」是絕對必要的防呆機制。
-*   **拼裝防呆融合**：針對拼接偽影，系統確定引入大學教授推薦的平滑特徵縫合演算法，將其部署於檢測流程的邊緣預處理端，以保證 A82 突出的判斷準確率。
-
----
-
-## 第四章：研究規劃實作
-
-### 4.1 系統軟硬體架構拓撲
-計畫將依序開發四大模組：
-1.  **3D 掃描點雲解構模組**：讀取前端傳感器高速回傳的點雲矩陣。
-2.  **基準面消除與降維處理模組**：自動計算參考幾何面，進行 Normalization 並輸出 2D 深度圖。
-3.  **Go/No-go 雙階段 AI 缺陷分割模組**：一階段輕量級 CNN 快速 Go/No-go 過濾，二階段高精度 ResNet 對 20% 重疊區塊進行深度缺陷特徵多標籤分類。
-4.  **現場生產整合平台**：整合工業通訊協定，向現場操作台即時回傳缺陷等級與位置。
-
-### 4.2 專利佈局時程與查核點
-*   **M03 (第三個月)**：完成基準面擬合代碼原型驗證，提交第 1 件發明專利申請（重點保護 3D 幾何變形去除技術）。
-*   **M06 (第六個月)**：完成 Go/No-go 雙階段重疊分類器，提交第 2 件發明專利申請（重點保護大解析度工業數據之高能效分區拼接）。
-
----
-
-## 第五章：預估效益分析
-
-### 5.1 技術突破與商業價值
-1.  **檢測指標躍升**：缺陷漏判率由現行 2D 影像系統的 15% 降低至 2% 以下，出廠良率大幅改善。
-2.  **降低客訴與經濟損失**：預期能減少下游酸洗、冷軋產線因邊裂斷帶造成的重大停機損失，每年估計為企業省下數百萬元新台幣。
-
-### 5.2 智財防禦強度 (FTO 評估)
-本專案透過「局部特徵縫合演算法」與「自適應基準面擬合」進行核心佈局，預期能完全繞開競爭對手的專利牆，降低 90% 以上的未來訴訟侵權風險。
-
----
-
-## 第六章：成果彙整
-
-本專案成果將直接與里程碑狀態機的檢核機制掛鉤：
-1.  **3D 鋼捲側緣缺陷高精度數據集**：包含超過 5,000 筆 A81-A85 以及邊裂之高質量深度圖與標註。
-2.  **AI 缺陷檢測平台軟體原型**：具備與現場 PLC 對接之工業 API 原始碼。
-3.  **發明專利**：完成 2 件核心發明專利之正式受理.
-4.  **學術產出**：於 IEEE Transactions 級別期刊發表 1 篇高水平論文。
-
----
-
-## 第七章：參考文獻
-
-以下為本專案深度解構並引用之全球專利與頂尖學術文獻完整清單（格式符合 APA 7th 規範，文內已同步完成引用標記）：
-
-{ref_list}
+## 檢索關鍵字與主題
+本報告針對以下關鍵字在 OpenAlex 與 Crossref 等全球文獻資料庫中進行了深度檢索，共收錄並解構了 {len(papers)} 篇頂尖學術論文與 {len(patents)} 件全球專利：
 """
-        else:
-            full_content = f"""# 計畫提案書：{proj_name}
+        for kw in keywords:
+            full_content += f"*   \"{kw}\"\n"
+        
+        full_content += f"""
+---
 
-## 摘要 (Abstract)
-本計畫針對 {proj_name} 領域中面臨的核心瓶頸展開深入研發。隨著工業與科技的高速發展，傳統檢測或處理方法在應對大維度特徵敏感度低、高計算延遲以及邊界效應干擾等方面展現出明顯的物理侷限。
-本計畫提出一套基於先進智慧化數據降維與特徵拼接的完整解決方案。核心創新包含：基於動態幾何基準擬合（Baseline Fitting）進行數據標準化，大幅降低噪聲；引進「Go/No-go 二階段快速篩選」搭配「邊際特徵自適應平滑拼接」策略，徹底解決算力負荷龐大與接縫處漏判的痛點。本專案將建立高訴訟防禦強度的專利壁壘，並發表高品質學術成果，預期能提升整體效率達 95% 以上。
+## 第二章：全球專利詳細分析 (按主題劃分)
+
+{patent_details}
 
 ---
 
-## 第一章：計畫緣起
+## 第三章：頂尖學術文獻詳細分析 (按主題劃分)
 
-### 1.1 現狀痛點與起因剖析
-在 {proj_name} 的實施與整合過程中，面臨的關鍵痛點包括：
-*   **特徵微小且多樣化**：在動態生產環境下，細微起伏或變異極難被常規方法捕捉。
-*   **系統幾何偏差干擾**：受外界震動或吊運沉降影響，整體形變往往掩蓋了局部的異常特徵。
-*   **算力與即時性衝突**：高解析度採樣數據量極大，傳統架構無法在極低延遲下完成解析。
-
-### 1.2 現有技術 (State of the Art) 侷限
-現行主流方法多受制於二維平面數據的物理極限，或面臨大維度數據解算複雜度過高的瓶頸，難以與現場的高速生產速度與動態環境同步。
-
-### 1.3 未來發展之核心技術
-為攻克此一瓶頸，本專案將採取以下關鍵技術路徑：
-1.  **基準面擬合（Baseline Fitting）**：動態建立參考基準面以消除系統幾何偏差，只保留相對於基準的局部異常特徵。
-2.  **特徵深度降維轉換**：將高維空間數據映射為高能效的二維特徵矩陣，優化分類器的計算載量。
-3.  **分區重疊取樣拼接**：採用 15%-20% 的重疊取樣，確保拼接邊界處的特徵被流暢整合。
+{paper_details}
 
 ---
 
-## 第二章：全球文獻與專利檢索
+## 第四章：參考文獻
 
-### 2.1 全球前 10 大技術國專利檢索綜整
-專利工程師針對關鍵字「{keywords_str}」檢索全球主要專利庫，共檢索並深度解構了 {len(patents)} 件代表專利 {cite_patent_1}。
-*   **專利牆現狀**：跨國科技巨頭在傳統大類架構下已布局大量基礎測量專利。
-*   **迴避設計與新穎性藍海**：本計畫鎖定之「自適應基準擬合」與「動態邊界重疊特徵融合」算法之專利布局仍屬藍海，FTO 自由實施評估極為安全 {cite_patent_2}。
-
-#### 全球專利檢索明細表
-{patent_table}
-
-### 2.2 頂尖學術文獻探討
-大學教授針對近 10 年內同儕審查之頂尖學術文獻進行了深入檢索與深度解構，共收錄 {len(papers)} 篇核心文獻：
-*   **文獻綜述**：目前在處理超高解析度數據時，降維投影與局部卷積分類是公認最佳的學術路徑 {cite_paper_1}。
-*   **接縫防呆機制**：文獻指出 15%-20% 的 Overlap 並導入插值平滑，能徹底消除邊緣偽影 {cite_paper_2}。
-
-#### 頂尖學術文獻檢索明細表
-{paper_table}
-{image_gallery}
-
----
-
-## 第三章：前置研究綜整
-
-由本計畫專家委員會（首席技術總監、AI工程師、專利工程師、大學教授、一線操作員）啟動 Mesh Mode 網狀大辯論，凝聚共識如下：
-*   **一線操作可行性對齊**：一線人員強調現場形變頻繁，必須引入「基準面擬合預處理」以消除大部分誤報。
-*   **拼裝防呆融合**：系統將部署邊緣預處理端之平滑縫合演算法，保障整體判讀的極高穩定度。
-
----
-
-## 第四章：研究規劃實作
-
-### 4.1 系統軟硬體架構拓撲
-計畫將依序開發四大模組：
-1.  **3D 高速採樣數據收集模組**：讀取前端傳感器高速回傳的特徵矩陣。
-2.  **基準面消除與降維處理模組**：自動計算參考幾何面並輸出深度降維矩陣。
-3.  **Go/No-go 雙階段 AI 缺陷分割模組**：輕量級一階段快速過濾搭配高精度二階段縫合分類。
-4.  **整合應用平台**：向主控端即時回傳分析數據與告警訊號。
-
-### 4.2 專利佈局時程與查核點
-*   **M03**：完成基準擬合代碼驗證，提交第 1 件發明專利申請。
-*   **M06**：完成雙階段分類拼接器，提交第 2 件發明專利申請。
-
----
-
-## 第五章：預估效益分析
-
-### 5.1 技術突破與商業價值
-1.  **檢測指標躍升**：綜合準確率預期提升至 95% 以上，大幅改善出廠良率。
-2.  **降低經濟損失**：防範重大事故發生，為企業節省巨額維護成本。
-
-### 5.2 智財防禦強度 (FTO 評估)
-採用自研迴避算法進行佈局，預期能完全繞開競爭對手的專利牆，極大降低未來侵權訴訟風險。
-
----
-
-## Sixth章：成果彙整
-
-1.  **高精度實測數據集**：包含數千筆標註之核心技術特徵資料。
-2.  **核心軟體原型與 API**：高能效演算法原始碼。
-3.  **發明專利**：申請 2 件核心專利。
-4.  **學術產出**：發表 1 篇高品質國際期刊或會議論文。
-
----
-
-## 第七章：參考文獻
-
-以下為本專案深度解構並引用之全球專利與頂尖學術文獻完整清單（格式符合 APA 7th 規範，文內已同步完成引用標記）：
+以下為本專案深度解構並引用之全球專利與頂尖學術文獻完整清單（符合 APA 7th 規範）：
 
 {ref_list}
 """
 
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(full_content)
-        print(f"[成功] 法定七大章節已完美拼接並輸出至: {output_file}")
+        print(f"[成功] 專利與學術文獻分析報告已完美拼接並輸出至: {output_file}")
+
 
     def assemble_slides_document(self, slides_name):
         """生成符合長官理解優化的簡報草稿 slides_proposal.md"""
