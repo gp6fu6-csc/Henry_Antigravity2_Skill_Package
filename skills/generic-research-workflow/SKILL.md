@@ -60,13 +60,10 @@ python "{baseDir}/scripts/run_workflow.py" "{project_path}"
 ```
 *(註：`{baseDir}` 為此 `SKILL.md` 所在的絕對路徑；`{project_path}` 為科研專案工作區目錄的絕對路徑。)*
 
-### 步驟 3：巡檢與圖片自適應生成
+### 步驟 3：產出驗證與歸檔
 
 工作流會自動在 `{project_path}/workspace/patent_academic_survey/` 下生成以下架構：
 * `papers/paper_themeX_YY/` 及 `patents/patent_branchX_YY/`：內含原始 PDF/Word、代表圖與摘要。
 * `results/`：包含最終產出成果（`final_report.md` 與 `slides_report.md`）。
 
-**重要**：作為更高級的 AI，執行完工作流後，你應該：
-1. 巡檢各文獻目錄下的 `representative_image.png`。
-2. 對於重要的技術，調用你的 `generate_image` 工具（Image Generator）生成更精美、符合文獻特徵的技術架構圖。
-3. 將生成的圖片覆蓋對應目錄下的 `representative_image.png`，這樣在 `results/final_report.md` 中就能自動載入精美的技術插圖。
+作為執行此技能的 AI，在執行完工作流後，請巡檢產出的檔案，確認提案書及簡報的完整性，並在此對齊用戶的具體需求（例如特定缺陷標準或定量指標）。

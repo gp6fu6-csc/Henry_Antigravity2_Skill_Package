@@ -270,7 +270,7 @@ class WorkflowRunner:
                     
                     # 2. 準備摘要內容
                     if is_steel:
-                        content = f"""# 📝 學術文獻解構報告：[{doc_id}]
+                        content_str = f"""# 📝 學術文獻解構報告：[{doc_id}]
 
 ## 1. 基本資訊
 *   **文獻標題**：{paper.get('title')}
@@ -287,12 +287,9 @@ class WorkflowRunner:
 *   **優劣勢與防禦壁壘分析**：
     *   *優勢*：成功將計算時間縮短 65% 以上，並維持極高精度；重疊縫合機制有效克制邊緣邊裂缺陷漏判。
     *   *劣勢*：對極端高低差形變的基準面擬合（Baseline Fitting）依賴性強，需要前置幾何校正。
-
-## 3. 技術架構圖示
-![](./representative_image.png)
 """
                     else:
-                        content = f"""# 📝 學術文獻解構報告：[{doc_id}]
+                        content_str = f"""# 📝 學術文獻解構報告：[{doc_id}]
 
 ## 1. 基本資訊
 *   **文獻標題**：{paper.get('title')}
@@ -309,21 +306,14 @@ class WorkflowRunner:
 *   **優劣勢與防禦壁壘分析**：
     *   *優勢*：在標準數據集上表現優異，顯著降低計算延遲，提升預測精度。
     *   *劣勢*：對於噪聲數據的魯棒性仍有提升空間，需進一步結合濾波預處理。
-
-## 3. 技術架構圖示
-![](./representative_image.png)
 """
                     # 寫入摘要至獨立子目錄中的 summary.md
                     with open(os.path.join(paper_sub_dir, "summary.md"), 'w', encoding='utf-8') as sf:
-                        sf.write(content)
+                        sf.write(content_str)
                     
                     # 寫入原格式 md 備份到 drafts
                     with open(os.path.join(self.drafts_dir, f"{doc_id}.md"), 'w', encoding='utf-8') as df:
-                        df.write(content)
-                        
-                    # 3. 寫入 Mock PDF 與 Mock 代表圖
-                    self._create_mock_pdf(os.path.join(paper_sub_dir, "raw_paper.pdf"), paper.get('title', doc_id))
-                    self._create_mock_image(os.path.join(paper_sub_dir, "representative_image.png"), paper.get('title', doc_id))
+                        df.write(content_str)
 
             elif file.startswith('patents_'):
                 for doc_idx, patent in enumerate(items):
@@ -336,7 +326,7 @@ class WorkflowRunner:
                     
                     # 2. 準備摘要內容
                     if is_steel:
-                        content = f"""# 🛡️ 專利文獻解構報告：[{doc_id}]
+                        content_str = f"""# 🛡️ 專利文獻解構報告：[{doc_id}]
 
 ## 1. 專利法律基本資訊
 *   **專利案號**：{patent.get('patent_number')}
@@ -352,13 +342,10 @@ class WorkflowRunner:
     2. 基於二階段（Go/No-go）快速篩選搭配 15%-20% 邊界重疊區間的局部卷積特徵提取。
 *   **專利優劣勢與 FTO 防禦分析**：
     *   *優勢*：首創基準面幾何形變消除法，顯著繞開了傳統 2D 相機受光照與視角干擾的專利牆。
-    *   *迴避路徑與壁壘*：此專利覆蓋了基準面去除法，本計畫可在邊界處導入雙重邊裂提取與即時重疊 stitching 防呆機制，建立獨立的新穎性申請專利。
-
-## 3. 專利技術圖式 (Patent Drawings)
-![](./representative_image.png)
+    *   *迴避路徑與壁壘*：此專利覆蓋了基準面去除法，本計畫可在邊界處導入雙重邊裂提取與即時重疊 stitching防呆機制，建立獨立的新穎性申請專利。
 """
                     else:
-                        content = f"""# 🛡️ 專利文獻解構報告：[{doc_id}]
+                        content_str = f"""# 🛡️ 專利文獻解構報告：[{doc_id}]
 
 ## 1. 專利法律基本資訊
 *   **專利案號**：{patent.get('patent_number')}
@@ -375,21 +362,14 @@ class WorkflowRunner:
 *   **專利優劣勢與 FTO 防禦分析**：
     *   *優勢*：實時校準機制在防範動態偏差方面具有極高的智財壁壘。
     *   *迴避路徑與壁壘*：可採用非線性擬合或分區重疊拼接來進行非侵權之迴避設計。
-
-## 3. 專利技術圖式 (Patent Drawings)
-![](./representative_image.png)
 """
                     # 寫入摘要至獨立子目錄中的 summary.md
                     with open(os.path.join(patent_sub_dir, "summary.md"), 'w', encoding='utf-8') as sf:
-                        sf.write(content)
+                        sf.write(content_str)
                         
                     # 寫入原格式 md 備份到 drafts
                     with open(os.path.join(self.drafts_dir, f"{doc_id}.md"), 'w', encoding='utf-8') as df:
-                        df.write(content)
-                        
-                    # 3. 寫入 Mock PDF 與 Mock 代表圖
-                    self._create_mock_pdf(os.path.join(patent_sub_dir, "raw_patent.pdf"), patent.get('title', doc_id))
-                    self._create_mock_image(os.path.join(patent_sub_dir, "representative_image.png"), patent.get('title', doc_id))
+                        df.write(content_str)
 
         print(f"[成功] 共生成 {paper_count} 篇學術論文與 {patent_count} 篇全球專利獨立解構資料夾！")
 
@@ -427,7 +407,8 @@ class WorkflowRunner:
                     "year": year.group(2).strip() if year else "Unknown Year",
                     "venue": venue.group(2).strip() if venue else "Unknown Venue",
                     "doi": doi.group(2).strip() if doi else "N/A",
-                    "file_name": file
+                    "file_name": file,
+                    "content": content
                 })
                 
             elif file.startswith('patent_branch'):
@@ -445,7 +426,8 @@ class WorkflowRunner:
                     "title": title.group(2).strip() if title else "Unknown Title",
                     "assignee": assignee.group(2).strip() if assignee else "Unknown Assignee",
                     "pub_year": pub_year.group(2).strip() if pub_year else "Unknown Year",
-                    "file_name": file
+                    "file_name": file,
+                    "content": content
                 })
                 
         return papers, patents
@@ -497,18 +479,36 @@ class WorkflowRunner:
                 doi_str = f" https://doi.org/{pap['doi']}" if pap['doi'] != 'N/A' and not pap['doi'].startswith('http') else f" {pap['doi']}" if pap['doi'] != 'N/A' else ""
                 ref_list += f"{pap['authors']} ({pap['year']}). {pap['title']}. *{pap['venue']}*.{doi_str} [詳細解構報告](../papers/{pap['id']}/summary.md)\n\n"
 
-        # 生成關鍵技術圖式展示區
-        image_gallery = "\n### 2.3 關鍵技術與專利圖式展示\n\n"
-        image_gallery += "以下為本計畫檢索出之代表性技術與專利架構圖（點擊可查看原始檔案與詳細摘要）：\n\n"
-        if papers:
-            image_gallery += "#### 學術文獻技術架構圖示\n\n"
-            for pap in papers:
-                # 使用相對於 results 目錄的路徑
-                image_gallery += f"*   **{pap['title']}**\n    ![{pap['title']} 架構圖](../papers/{pap['id']}/representative_image.png)\n\n"
-        if patents:
-            image_gallery += "#### 專利技術圖式\n\n"
-            for pat in patents:
-                image_gallery += f"*   **專利案號 {pat['pat_num']}**\n    ![專利 {pat['pat_num']} 圖式](../patents/{pat['id']}/representative_image.png)\n\n"
+        # 根據關鍵字主題劃分，生成全球專利與學術論文的詳細解構內容 (取代原本的 image_gallery)
+        keywords = self.config.get("keywords", [])
+        
+        patent_details = "\n### 2.3 全球專利詳細解構內容 (依關鍵字主題劃分)\n\n"
+        for k, kw in enumerate(keywords):
+            kw_patents = [p for p in patents if f"branch{k}_" in p["id"]]
+            if kw_patents:
+                patent_details += f"\n#### 2.3.{k+1} 主題：{kw} (相關專利共 {len(kw_patents)} 件)\n\n"
+                for pat in kw_patents:
+                    adjusted = pat["content"].replace("\n# ", "\n##### ").replace("\n## ", "\n###### ")
+                    if adjusted.startswith("# "):
+                        adjusted = "##### " + adjusted[2:]
+                    patent_details += adjusted + "\n\n---\n"
+            else:
+                patent_details += f"\n#### 2.3.{k+1} 主題：{kw} (無相關專利)\n\n"
+
+        paper_details = "\n### 2.4 頂尖學術文獻詳細解構內容 (依關鍵字主題劃分)\n\n"
+        for k, kw in enumerate(keywords):
+            kw_papers = [p for p in papers if f"theme{k}_" in p["id"]]
+            if kw_papers:
+                paper_details += f"\n#### 2.4.{k+1} 主題：{kw} (相關文獻共 {len(kw_papers)} 篇)\n\n"
+                for pap in kw_papers:
+                    adjusted = pap["content"].replace("\n# ", "\n##### ").replace("\n## ", "\n###### ")
+                    if adjusted.startswith("# "):
+                        adjusted = "##### " + adjusted[2:]
+                    paper_details += adjusted + "\n\n---\n"
+            else:
+                paper_details += f"\n#### 2.4.{k+1} 主題：{kw} (無相關文獻)\n\n"
+
+        image_gallery = patent_details + "\n\n" + paper_details
 
         # 準備 APA 7th 文內引用標註
         cite_paper_1 = f"({self._format_apa_author(papers[0]['authors'])}, {papers[0]['year']})" if len(papers) > 0 else "(Wang & Chen, 2024)"
