@@ -1,0 +1,8 @@
+{
+  "name": "project-report-doctomd",
+  "version": "2.0.0",
+  "description": "Comprehensive skill for converting research project documents (Word/PDF proposals, interim reports, final reports, results, shortnotes, and PowerPoint slides) into structured Markdown files with figure image extraction.",
+  "author": {
+    "name": "Antigravity"
+  }
+}
