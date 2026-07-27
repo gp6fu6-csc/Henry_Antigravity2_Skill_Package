@@ -5,7 +5,7 @@ description: Converts all research project documents (proposals, interim reports
 
 # Project Report DocToMD (研究計畫文件全方位轉 .md 紀錄)
 
-This skill provides a comprehensive workflow for converting research project documents (Word, PDF, PowerPoint) into clean, structured Markdown (`.md`) reports based on template architecture, automatically extracting and accurately naming figures (`圖.編號`).
+This skill provides a comprehensive workflow for converting research project documents (Word, PDF, PowerPoint) into clean, structured Markdown (`.md`) reports based on template architecture, automatically extracting and accurately naming figures (`圖.編號`) and tables.
 
 ## Supported Document Types
 - **提案報告 (Proposal)**: Template `提案樣板.md`
@@ -56,59 +56,74 @@ Present the following summary table to the user and request confirmation:
 
 ### Approach A: Word-like Document Conversion
 
-1. **Text Extraction**:
-   ```bash
-   uv tool run --with "markitdown[all]" markitdown "path/to/document.pdf" -o "temp_extracted.md"
-   ```
+1. **Text Extraction & Full Content Integrity**:
+   - Extract full text without summarization or truncation.
+   - Use `markitdown` or `fitz` for general text extraction.
 
-2. **Image Extraction & Caption Matching**:
-   Use PyMuPDF (`fitz`) to extract embedded images and match captions (`圖 1`, `圖 2`, `圖 1(a)`):
+2. **Table Extraction (Preventing Vertical Alignment Corruption)**:
+   - **CRITICAL**: Do NOT rely on raw text line extraction for PDF tables. Narrow vertical-header cells (e.g. `技\n術`) will break into vertical single-character lists.
+   - Use `pdfplumber` (or PyMuPDF `page.find_tables()`) to extract PDF table matrices.
+   - Convert table matrices into clean GitHub Flavored Markdown (GFM) tables:
+     ```python
+     def table_to_gfm(table_data):
+         clean_table = []
+         for row in table_data:
+             if not row: continue
+             clean_row = [str(c).strip().replace('\n', '<br>') if c is not None else "" for c in row]
+             if any(clean_row): clean_table.append(clean_row)
+         if not clean_table: return ""
+         num_cols = max(len(r) for r in clean_table)
+         lines = ["| " + " | ".join(clean_table[0]) + " |", "| " + " | ".join(["---"]*num_cols) + " |"]
+         for r in clean_table[1:]: lines.append("| " + " | ".join(r) + " |")
+         return "\n".join(lines)
+     ```
+
+3. **Page-Clipped Image Extraction & Precise Figure Naming**:
+   - **CRITICAL**: Do NOT extract raw XObject streams blindly, as composite figures/drawing objects will split into fragments like `-3.jpeg` or fallback to `圖_p1_1.png`.
+   - Scan page text for figure captions (`圖 1`, `圖 2`, `圖 3`...).
+   - Match captions with page image bounding boxes (searching BOTH above and below captions within 300pt).
+   - Render page clips using `page.get_pixmap(clip=crop_box, dpi=200)` and save strictly named after the figure caption: `圖1.png`, `圖2.png`, `圖3.png`.
+
    ```python
-   import fitz, os, re
-   
-   pdf_path = "path/to/document.pdf"
-   output_dir = "path/to/圖片"
-   os.makedirs(output_dir, exist_ok=True)
-   
-   doc = fitz.open(pdf_path)
-   for page_index in range(len(doc)):
-       page = doc[page_index]
-       image_list = page.get_images(full=True)
-       blocks = page.get_text("dict")["blocks"]
-       text_blocks = [b for b in blocks if b["type"] == 0]
-   
-       for img_index, img in enumerate(image_list):
-           xref = img[0]
-           base_image = doc.extract_image(xref)
-           image_bytes = base_image["image"]
-           image_ext = base_image["ext"]
-           rects = page.get_image_rects(xref)
-           if not rects: continue
-           img_rect = rects[0]
-   
-           caption = f"圖_p{page_index+1}_{img_index+1}"
-           min_dist = 9999
-           for b in text_blocks:
-               bbox = fitz.Rect(b["bbox"])
-               if bbox.y0 >= img_rect.y1:
-                   dist = bbox.y0 - img_rect.y1
-                   if dist < 120 and dist < min_dist:
-                       text = "".join([l["spans"][0]["text"] for l in b["lines"]]).strip()
-                       match = re.search(r'圖\s*(\d+[a-zA-Z\(\)]*|-\d+)', text)
-                       if match:
-                           caption = f"圖{match.group(1)}"
-                           min_dist = dist
-   
-           safe_caption = re.sub(r'[\\/*?:"<>|]', '_', caption)
-           image_path = os.path.join(output_dir, f"{safe_caption}.{image_ext}")
-           with open(image_path, "wb") as f:
-               f.write(image_bytes)
+   import fitz, re, os
+
+   def extract_figures_clean(pdf_path, output_dir):
+       os.makedirs(output_dir, exist_ok=True)
+       doc = fitz.open(pdf_path)
+       extracted = {}
+       for page_idx, page in enumerate(doc):
+           blocks = page.get_text("dict")["blocks"]
+           captions = []
+           for b in blocks:
+               if b.get("type") == 0:
+                   for line in b.get("lines", []):
+                       txt = "".join([s.get("text", "") for s in line.get("spans", [])]).strip()
+                       m = re.match(r'^(圖)\s*(\d+[a-zA-Z\(\)]*)[\s\:\：\.\s]*(.*)', txt)
+                       if m:
+                           captions.append({"num": m.group(2), "bbox": fitz.Rect(line["bbox"])})
+           img_rects = [r for img in page.get_images() for r in page.get_image_rects(img[0])]
+           for c in captions:
+               fig_key = f"圖{c['num']}"
+               if fig_key in extracted: continue
+               target_rect, min_dist = None, 9999
+               for r in img_rects:
+                   dist = abs(c['bbox'].y0 - r.y1) if r.y1 <= c['bbox'].y0 else (abs(r.y0 - c['bbox'].y1) if r.y0 >= c['bbox'].y1 else 0)
+                   if dist < min_dist: min_dist, target_rect = dist, r
+               crop_box = fitz.Rect(max(0, target_rect.x0-5), max(0, target_rect.y0-5), min(page.rect.width, target_rect.x1+5), min(page.rect.height, target_rect.y1+5)) if (target_rect and min_dist < 300) else fitz.Rect(max(0, c['bbox'].x0-200), max(0, c['bbox'].y0-250), min(page.rect.width, c['bbox'].x1+200), max(0, c['bbox'].y0-5))
+               pix = page.get_pixmap(clip=crop_box, dpi=200)
+               img_path = os.path.join(output_dir, f"{fig_key}.png")
+               pix.save(img_path)
+               extracted[fig_key] = f"{fig_key}.png"
+       return extracted
    ```
 
-3. **Template Formatting**:
-   - Align content with target template (`提案樣板.md`, `期中樣板.md`, `結案樣板.md`, etc.).
-   - Embed relative image links `![圖1 ...](圖片/圖1.jpeg)`.
-   - Overwrite or write to the target template file in the destination folder.
+4. **Precise Image Link Embedding in Markdown**:
+   - Do NOT use naive `str.replace("圖1", ...)` on text, which corrupts inline text citations like `(如圖1所示)`.
+   - Replace only standalone Figure Title lines (`圖 1 相機配置圖`) with `![圖1 相機配置圖](圖片/圖1.png)`.
+
+5. **Template Alignment**:
+   - Fill in frontmatter, `# 結案摘要`, `# 目標達成情形`, `# 單頁報告`, and `# 結案內文`.
+   - Overwrite target template file in destination folder.
 
 ---
 
