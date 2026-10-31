@@ -1,0 +1,8 @@
+{
+  "name": "my-aiagent-cowork",
+  "version": "1.0.0",
+  "description": "Antigravity 2.0 與地端 LLM 協同作業核心外掛 (Hybrid AI Agent Collaboration Plugin)。包含任務分工宣示、地端模型調度與 Token 節省機制。",
+  "author": {
+    "name": "Antigravity"
+  }
+}

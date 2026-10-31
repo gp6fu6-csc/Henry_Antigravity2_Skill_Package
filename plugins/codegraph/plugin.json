@@ -1,0 +1,11 @@
+﻿{
+    "version":  "1.0.0",
+    "name":  "codegraph",
+    "repository":  "https://github.com/colbymchenry/codegraph",
+    "description":  "Semantic code intelligence, deterministic AST code graph, and surgical context extraction tool for AI coding agents.",
+    "author":  {
+                   "name":  "Colby McHenry",
+                   "url":  "https://github.com/colbymchenry"
+               },
+    "license":  "MIT"
+}

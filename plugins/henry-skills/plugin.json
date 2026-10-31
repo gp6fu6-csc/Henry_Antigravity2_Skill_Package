@@ -1,0 +1,11 @@
+﻿{
+    "version":  "1.0.0",
+    "name":  "henry-skills",
+    "repository":  "https://github.com/gp6fu6-csc/Henry_Antigravity2_Skill_Package",
+    "description":  "Unified skills package for Henry (Academic Research, Frontend Design, Generic Research, GitHub, RTK, NotebookLM, Ruflo Swarm, Skill Creator)",
+    "author":  {
+                   "name":  "Henry / gp6fu6-csc",
+                   "url":  "https://github.com/gp6fu6-csc"
+               },
+    "license":  "MIT"
+}

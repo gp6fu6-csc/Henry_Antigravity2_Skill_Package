@@ -1,0 +1,11 @@
+﻿{
+    "version":  "1.0.0",
+    "name":  "karpathy-autoresearch",
+    "repository":  "https://github.com/karpathy/autoresearch",
+    "description":  "Autonomous LLM research and self-directed experimentation framework by Andrej Karpathy.",
+    "author":  {
+                   "name":  "Andrej Karpathy",
+                   "url":  "https://github.com/karpathy"
+               },
+    "license":  "MIT"
+}

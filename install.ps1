@@ -1,25 +1,29 @@
 # Henry_Antigravity2_Skill_Package Installer (Windows Only)
+$ErrorActionPreference = "Stop"
 
-$TargetDir = "$HOME\.gemini\config\plugins\henry-skills"
+$globalSkillsDir = "$HOME\.gemini\config\skills"
+$globalPluginsDir = "$HOME\.gemini\config\plugins"
 
 Write-Host "Installing Henry_Antigravity2_Skill_Package to global Antigravity config..." -ForegroundColor Cyan
 
-# 1. Create target directory
-if (-not (Test-Path "$TargetDir\skills")) {
-    New-Item -ItemType Directory -Path "$TargetDir\skills" -Force | Out-Null
+# 1. Ensure target directories exist
+if (-not (Test-Path $globalSkillsDir)) {
+    New-Item -ItemType Directory -Path $globalSkillsDir -Force | Out-Null
+}
+if (-not (Test-Path $globalPluginsDir)) {
+    New-Item -ItemType Directory -Path $globalPluginsDir -Force | Out-Null
 }
 
-# 2. Create plugin.json
-$PluginJson = @"
-{
-  "name": "henry-skills",
-  "description": "Unified skills package for Henry (Karpathy, RTK, NotebookLM, GitHub)",
-  "version": "1.0.0"
+# 2. Deploy all skills
+Write-Host "Deploying skills to $globalSkillsDir ..." -ForegroundColor Yellow
+if (Test-Path ".\skills") {
+    Copy-Item -Path ".\skills\*" -Destination $globalSkillsDir -Recurse -Force
 }
-"@
-Set-Content -Path "$TargetDir\plugin.json" -Value $PluginJson -Force
 
-# 3. Copy skills
-Copy-Item -Path ".\skills\*" -Destination "$TargetDir\skills" -Recurse -Force
+# 3. Deploy all plugins
+Write-Host "Deploying plugins to $globalPluginsDir ..." -ForegroundColor Yellow
+if (Test-Path ".\plugins") {
+    Copy-Item -Path ".\plugins\*" -Destination $globalPluginsDir -Recurse -Force
+}
 
-Write-Host "Installation completed successfully! The skills are now active globally." -ForegroundColor Green
+Write-Host "Installation completed successfully! All 21 skills and plugins are active globally." -ForegroundColor Green

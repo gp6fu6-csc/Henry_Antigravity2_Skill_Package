@@ -1,0 +1,11 @@
+﻿{
+    "version":  "1.0.0",
+    "name":  "karpathy-guideline",
+    "repository":  "https://github.com/gp6fu6-csc/andrej-karpathy-skills",
+    "description":  "Behavioral guidelines to reduce common LLM coding mistakes, derived from Andrej Karpathy\u0027s observations on LLM coding pitfalls.",
+    "homepage":  "https://github.com/gp6fu6-csc/andrej-karpathy-skills",
+    "author":  {
+                   "name":  "Andrej Karpathy / forrestchang"
+               },
+    "license":  "MIT"
+}

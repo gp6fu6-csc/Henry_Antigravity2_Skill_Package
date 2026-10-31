@@ -1,0 +1,11 @@
+{
+  "name": "karpathy-guideline-12",
+  "version": "1.2.0",
+  "description": "Andrej Karpathy extended 12 behavioral guidelines for LLMs and Coding Agents.",
+  "author": {
+    "name": "Andrej Karpathy / twj515895394"
+  },
+  "homepage": "https://github.com/twj515895394/andrej-karpathy-skills-12",
+  "repository": "https://github.com/twj515895394/andrej-karpathy-skills-12",
+  "license": "MIT"
+}
