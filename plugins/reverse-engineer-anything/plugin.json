@@ -1,0 +1,11 @@
+﻿{
+    "version":  "1.0.0",
+    "name":  "reverse-engineer-anything",
+    "repository":  "https://github.com/gp6fu6-csc/Reverse-Engineer-Anythong",
+    "description":  "Reverse engineer native, managed, Electron/JavaScript, packaged, firmware, and browser targets with REA.",
+    "author":  {
+                   "name":  "gp6fu6-csc / REA Team",
+                   "url":  "https://github.com/gp6fu6-csc/Reverse-Engineer-Anythong"
+               },
+    "license":  "MIT"
+}
